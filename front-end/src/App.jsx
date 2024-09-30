@@ -2,7 +2,7 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-
+import myfetch from './lib/myfetch'
 import './App.css'
 import TopBar from './ui/TopBar'
 import theme from './ui/theme'
@@ -12,23 +12,45 @@ import FooterBar from './ui/FooterBar'
 import AppRoutes from './routes/AppRoutes'
 import Box from '@mui/material/Box'
 import { BrowserRouter } from 'react-router-dom'
+import AuthUserContext from './contexts/AuthUserContext'
+import React from 'react'
+
 
 function App() {
+  // variavel de estado que armazena as informações
+  // do Usuario autenticado
+  const [authUser, setAuthUser] = React.useState(null)
+  const [redirectLocation, setRedirectLocation] = React.useState(null)
+
+  React.useEffect(() => {
+    fetchAuthUser()
+  }, [])
+
+  async function fetchAuthUser(){
+    try {
+      const authUser = await myfetch.get('/user/me')
+      setAuthUser(authUser)
+    }
+    catch(error){
+      console.error(error)
+    }
+  }
   return (
     <>
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <BrowserRouter>
-          
-          <TopBar />
-          
-          <Box sx={{ 
+          <AuthUserContext.Provider value={{ authUser, setAuthUser, redirectLocation, setRedirectLocation }}>
+            <TopBar />
+
+            <Box sx={{
               m: '24px 24px 72px 24px'
             }}>
-            <AppRoutes />
-          </Box>
-          
-          <FooterBar />
+              <AppRoutes />
+            </Box>
+
+            <FooterBar />
+          </AuthUserContext.Provider>
         </BrowserRouter>
       </ThemeProvider>
     </>
