@@ -28,16 +28,17 @@ model Car {
 
 }
 
-model Customer{
-  id                Int       @id @default(autoincrement())
-  name              String    
-  ident_document    String    
-  birth_date        DateTime?    
-  street_name       String       
-  house_number      String   
-  complements       String?    
-  municipality      String 
-  state             String  
+model Customer {
+  id                Int         @id @default(autoincrement())
+  name              String
+  ident_document    String
+  birth_date        DateTime?
+  street_name       String
+  house_number      String
+  complements       String?
+  district          String      @default("Centro")
+  municipality      String
+  state             String
   phone             String
   email             String
 }
