@@ -12,7 +12,7 @@ import CustomerList from '../pages/customer/CustomerList'
 
 import About from '../pages/About'
 
-import Login from '../pages/Login'
+import Login from '../pages/login'
 
 export default function AppRoutes() {
   return <Routes>
