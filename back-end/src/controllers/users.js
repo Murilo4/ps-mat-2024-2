@@ -7,9 +7,12 @@ const controller = {}     // Objeto vazio
 controller.create = async function(req, res) {
   try {
 
-    if(req.body.password){
+    // Verificando se foi passado o campo "password"
+    // Em caso afirmativo, criptografa a senha
+    if(req.body.password) {
       req.body.password = await bcrypt.hash(req.body.password, 12)
     }
+
     await prisma.user.create({ data: req.body })
 
     // HTTP 201: Created
@@ -25,8 +28,10 @@ controller.create = async function(req, res) {
 
 controller.retrieveAll = async function(req, res) {
   try {
-    const result = await prisma.user.findMany()
-      omit: {password: true}
+    const result = await prisma.user.findMany({
+      omit: { password: true }   // Não retorna o campo "password"
+    })
+
     // HTTP 200: OK (implícito)
     res.send(result)
   }
@@ -40,9 +45,8 @@ controller.retrieveAll = async function(req, res) {
 
 controller.retrieveOne = async function(req, res) {
   try {
-  
     const result = await prisma.user.findUnique({
-      omit: {password: true},
+      omit: { password: true },   // Não retorna o campo "password"
       where: { id: Number(req.params.id) }
     })
 
@@ -62,9 +66,12 @@ controller.retrieveOne = async function(req, res) {
 controller.update = async function(req, res) {
   try {
 
-    if(req.body.password){
+    // Verificando se foi passado o campo "password"
+    // Em caso afirmativo, criptografa a senha
+    if(req.body.password) {
       req.body.password = await bcrypt.hash(req.body.password, 12)
     }
+
     const result = await prisma.user.update({
       where: { id: Number(req.params.id) },
       data: req.body
@@ -107,39 +114,74 @@ controller.delete = async function(req, res) {
   }
 }
 
-controller.login = async function(req, res){
-  try{
-    const user = await prisma.user.findFirst({
-      where:{
-        OR: [
-          {username: req.body?.username},
-          {email: req.body?.email}
-        ]
-      }
-    })
-    if(! user) return res.status(401).end()
-    const passwordIsvalid = await bcrypt.compare(req.body?.password, user.password)
-    if(! passwordIsvalid) return res.status(401).end()
+controller.login = async function(req, res) {
+  try {
 
-    const token = jwt.sign(
-      user,
-      process.env.TOKEN_SECRET,
-      {expiresIn: '24h'}
-    )
+      // Busca o usuário no BD usando o valor dos campos
+      // "username" OU "email"
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: req.body?.username },
+            { email: req.body?.email }
+          ]
+        }
+      })
 
-    res.send({token, user})
-    
+      // Se o usuário não for encontrado, retorna
+      // HTTP 401: Unauthorized
+      if(! user) return res.status(401).end()
+
+      // Usuário encontrado, vamos conferir a senha
+      const passwordIsValid = await bcrypt.compare(req.body?.password, user.password)
+
+      // Se a senha estiver errada, retorna
+      // HTTP 401: Unauthorized
+      if(! passwordIsValid) return res.status(401).end()
+
+      // Usuário e senha OK, passamos ao procedimento de gerar o token
+      const token = jwt.sign(
+        user,                       // Dados do usuário
+        process.env.TOKEN_SECRET,   // Senha para criptografar o token
+        { expiresIn: '24h' }        // Prazo de validade do token
+      )
+
+      // Formamos o cookie para enviar ao front-end
+      res.cookie(process.env.AUTH_COOKIE_NAME, token, {
+        httpOnly: true, // O cookie ficará inacessível para o JS no front-end
+        secure: true,   // O cookie será criptografado em conexões https
+        sameSite: 'None',
+        path: '/',
+        maxAge: 24 * 60 * 60 * 100  // 24h
+      })
+
+      // Retorna o token e o usuário autenticado
+      // res.send({token, user})
+
+      // Com a implementação do cookie, apenas o usuário é
+      // retornado ao front-end
+      // HTTP 200: OK (implícito)
+      res.send({user})
   }
-  catch(error){
+  catch(error) {
     console.error(error)
 
+    // HTTP 500: Internal Server Error
     res.status(500).end()
   }
 }
 
-controller.me = function(req, res){
-  res.send(req?.authUser)
+controller.logout = function (req, res) {
+  // Apaga no front-end o cookie que armazena o token de autorização
+  res.clearCookie(process.env.AUTH_COOKIE_NAME)
+  // HTTP 204: No Content
+  res.status(204).end()
 }
 
+controller.me = function(req, res) {
+  // Retorna as informações do usuário autenticado
+  // HTTP 200: OK (implícito)
+  res.send(req?.authUser)
+}
 
 export default controller
