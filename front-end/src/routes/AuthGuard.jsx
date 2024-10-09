@@ -14,7 +14,7 @@ export default function AuthGuard({ children }) {
   const navigate = useNavigate()
 
   async function checkAuthUser() {
-    setStatus('PROCESSING')
+    if(setStatus) setStatus('PROCESSING')
     showWaiting(true)
     try {
       const authUser = await myfetch.get('/users/me')
@@ -32,7 +32,10 @@ export default function AuthGuard({ children }) {
   }
 
   React.useEffect(() => {
+    // Salva a rota atual para posterior redirecionamento,
+    // caso a rota atual não seja o próprio login
     if(! location.pathname.includes('login')) setRedirectLocation(location)
+
     checkAuthUser()
   }, [location])
 
