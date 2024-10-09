@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import logo from '../assets/karangos-logo-600px.png'
 import MainMenu from './MainMenu'
-import AuthControl from './AuthControl'
+import AuthControl from './Authcontrol'
 
 export default function TopBar() {
   return (
