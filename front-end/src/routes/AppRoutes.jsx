@@ -14,7 +14,7 @@ import UserList from '../pages/user/UserList'
 
 import About from '../pages/About'
 
-import Login from '../pages/Login'
+import Login from '../pages/login'
 
 export default function AppRoutes() {
   return <Routes>
