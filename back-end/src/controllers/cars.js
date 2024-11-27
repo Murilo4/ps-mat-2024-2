@@ -1,133 +1,133 @@
-import prisma from '../database/client.js'
+import prisma from '../database/client.js';
+import car from '../models/car.js';
+import { z } from 'zod';
 
-const controller = {}     // Objeto vazio
+const controller = {};
 
-controller.create = async function(req, res) {
+controller.create = async function (req, res) {
   try {
+    const validatedData = car.parse(req.body);
 
-    // Preenche qual usuário criou o carro com o id do usuário autenticado
-    req.body.created_user_id = req.authUser.id
+    validatedData.created_user_id = req.authUser.id;
 
-    // Preenche qual usuário modificou por último o carro com o id
-    // do usuário autenticado
-    req.body.updated_user_id = req.authUser.id
+    validatedData.updated_user_id = req.authUser.id;
 
-    await prisma.car.create({ data: req.body })
+    await prisma.car.create({ data: validatedData });
 
-    // HTTP 201: Created
-    res.status(201).end()
+    res.status(201).end();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const formattedErrors = error.errors.map((erros) => ({
+        message: erros.message,
+      }));
+
+      console.error(formattedErrors);
+      
+      return res.status(400).json({
+        message: 'Erro de validação',
+        errors: formattedErrors,
+      });
+    }
+    console.error(error);
+
+    res.status(500).end();
   }
-  catch(error) {
-    console.error(error)
+};
 
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
-  }
-}
-
-controller.retrieveAll = async function(req, res) {
+controller.retrieveAll = async function (req, res) {
   try {
+    const includedRels = req.query.include?.split(',') ?? [];
 
-    const includedRels = req.query.include?.split(',') ?? []
-    
     const result = await prisma.car.findMany({
       orderBy: [
         { brand: 'asc' },
         { model: 'asc' },
-        { id: 'asc' }
+        { id: 'asc' },
       ],
       include: {
         customer: includedRels.includes('customer'),
         created_user: includedRels.includes('created_user'),
-        updated_user: includedRels.includes('updated_user')
-      }
-    })
+        updated_user: includedRels.includes('updated_user'),
+      },
+    });
 
-    // HTTP 200: OK (implícito)
-    res.send(result)
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).end();
   }
-  catch(error) {
-    console.error(error)
+};
 
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
-  }
-}
-
-controller.retrieveOne = async function(req, res) {
+controller.retrieveOne = async function (req, res) {
   try {
-
-    const includedRels = req.query.include?.split(',') ?? []
+    const includedRels = req.query.include?.split(',') ?? [];
 
     const result = await prisma.car.findUnique({
       where: { id: Number(req.params.id) },
       include: {
         customer: includedRels.includes('customer'),
         created_user: includedRels.includes('created_user'),
-        updated_user: includedRels.includes('updated_user')
-      }
-    })
+        updated_user: includedRels.includes('updated_user'),
+      },
+    });
 
-    // Encontrou ~> retorna HTTP 200: OK (implícito)
-    if(result) res.send(result)
-    // Não encontrou ~> retorna HTTP 404: Not Found
-    else res.status(404).end()
+    if (result) res.send(result);
+    else res.status(404).end();
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).end();
   }
-  catch(error) {
-    console.error(error)
+};
 
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
-  }
-}
-
-controller.update = async function(req, res) {
+controller.update = async function (req, res) {
   try {
+    req.body.updated_user_id = req.authUser.id;
 
-    // Preenche qual usuário modificou por último o carro com o id
-    // do usuário autenticado
-    req.body.updated_user_id = req.authUser.id
+    const validatedData = schema.parse(req.body);
 
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
-      data: req.body
-    })
+      data: validatedData,
+    });
 
-    // Encontrou e atualizou ~> HTTP 204: No Content
-    if(result) res.status(204).end()
-    // Não encontrou (e não atualizou) ~> HTTP 404: Not Found
-    else res.status(404).end()
+    if (result) res.status(204).end();
+    else res.status(404).end();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const formattedErrors = error.errors.map((err) => ({
+        path: err.path.join('.'),
+        message: err.message,
+      }));
+
+      return res.status(400).json({
+        message: 'Erro de validação',
+        errors: formattedErrors,
+      });
+    }
+
+    console.error(error);
+
+    res.status(500).end();
   }
-  catch(error) {
-    console.error(error)
+};
 
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
-  }
-}
-
-controller.delete = async function(req, res) {
+controller.delete = async function (req, res) {
   try {
     await prisma.car.delete({
-      where: { id: Number(req.params.id) }
-    })
+      where: { id: Number(req.params.id) },
+    });
 
-    // Encontrou e excluiu ~> HTTP 204: No Content
-    res.status(204).end()
-  }
-  catch(error) {
-    if(error?.code === 'P2025') {
-      // Não encontrou e não excluiu ~> HTTP 404: Not Found
-      res.status(404).end()
-    }
-    else {
-      // Outros tipos de erro
-      console.error(error)
-
-      // HTTP 500: Internal Server Error
-      res.status(500).end()
+    res.status(204).end();
+  } catch (error) {
+    if (error?.code === 'P2025') {
+      res.status(404).end();
+    } else {
+      console.error(error);
+      res.status(500).end();
     }
   }
-}
+};
 
-export default controller
+export default controller;
